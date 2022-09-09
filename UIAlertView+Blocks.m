@@ -33,6 +33,7 @@
 static const void *UIAlertViewOriginalDelegateKey                   = &UIAlertViewOriginalDelegateKey;
 
 static const void *UIAlertViewTapBlockKey                           = &UIAlertViewTapBlockKey;
+static const void *UIAlertViewTextViewTapBlockKey                   = &UIAlertViewTextViewTapBlockKey;
 static const void *UIAlertViewWillPresentBlockKey                   = &UIAlertViewWillPresentBlockKey;
 static const void *UIAlertViewDidPresentBlockKey                    = &UIAlertViewDidPresentBlockKey;
 static const void *UIAlertViewWillDismissBlockKey                   = &UIAlertViewWillDismissBlockKey;
@@ -67,6 +68,54 @@ static const void *UIAlertViewShouldEnableFirstOtherButtonBlockKey  = &UIAlertVi
     
     if (tapBlock) {
         alertView.tapBlock = tapBlock;
+    }
+    
+    [alertView show];
+    
+#if !__has_feature(objc_arc)
+    return [alertView autorelease];
+#else
+    return alertView;
+#endif
+}
+
++ (instancetype)showWithTitle:(NSString *)title
+                      message:(NSString *)message
+                        style:(UIAlertViewStyle)style
+                   textToEdit:(NSString *)text
+                  placeholder:(NSString *)placeholder
+            cancelButtonTitle:(NSString *)cancelButtonTitle
+            otherButtonTitles:(NSArray *)otherButtonTitles
+                     tapBlock:(UIAlertViewTextFieldCompletionBlock)tapBlock {
+    
+    NSString *firstObject = otherButtonTitles.count ? otherButtonTitles[0] : nil;
+    
+    UIAlertView *alertView = [[self alloc] initWithTitle:title
+                                                 message:message
+                                                delegate:nil
+                                       cancelButtonTitle:cancelButtonTitle
+                                       otherButtonTitles:firstObject, nil];
+    
+    alertView.alertViewStyle = style;
+    
+    if (alertView.alertViewStyle == UIAlertViewStylePlainTextInput ||
+        alertView.alertViewStyle == UIAlertViewStyleSecureTextInput) {
+        UITextField* textField = [alertView textFieldAtIndex:0];
+        
+        if (!text || [text length] ) {
+            textField.text = text;
+        }
+        textField.placeholder = placeholder;
+    }
+    
+    if (otherButtonTitles.count > 1) {
+        for (NSString *buttonTitle in [otherButtonTitles subarrayWithRange:NSMakeRange(1, otherButtonTitles.count - 1)]) {
+            [alertView addButtonWithTitle:buttonTitle];
+        }
+    }
+    
+    if (tapBlock) {
+        alertView.textViewTapBlock = tapBlock;
     }
     
     [alertView show];
@@ -128,6 +177,19 @@ static const void *UIAlertViewShouldEnableFirstOtherButtonBlockKey  = &UIAlertVi
     [self _checkAlertViewDelegate];
     objc_setAssociatedObject(self, UIAlertViewDidDismissBlockKey, didDismissBlock, OBJC_ASSOCIATION_COPY);
 }
+
+// Custom code to support showing an alert with a UITextField
+
+- (UIAlertViewTextFieldCompletionBlock)textViewTapBlock {
+    return objc_getAssociatedObject(self, UIAlertViewTextViewTapBlockKey);
+}
+
+- (void)setTextViewTapBlock:(UIAlertViewTextFieldCompletionBlock)tapBlock {
+    [self _checkAlertViewDelegate];
+    objc_setAssociatedObject(self, UIAlertViewTextViewTapBlockKey, tapBlock, OBJC_ASSOCIATION_COPY);
+}
+
+// End custom code
 
 - (UIAlertViewBlock)willPresentBlock {
     return objc_getAssociatedObject(self, UIAlertViewWillPresentBlockKey);
@@ -209,10 +271,17 @@ static const void *UIAlertViewShouldEnableFirstOtherButtonBlockKey  = &UIAlertVi
 
 - (void)alertView:(UIAlertView *)alertView clickedButtonAtIndex:(NSInteger)buttonIndex {
     UIAlertViewCompletionBlock completion = alertView.tapBlock;
-    
+    UIAlertViewTextFieldCompletionBlock textFieldCompletion = alertView.textViewTapBlock;
     if (completion) {
         completion(alertView, buttonIndex);
     }
+    
+    // Custom code to send the support showing an alert with a UITextField
+    if (textFieldCompletion) {
+        NSString* text = [alertView textFieldAtIndex:0].text;
+        textFieldCompletion(alertView, buttonIndex, text);
+    }
+    // End custom code
     
     id originalDelegate = objc_getAssociatedObject(self, UIAlertViewOriginalDelegateKey);
     if (originalDelegate && [originalDelegate respondsToSelector:@selector(alertView:clickedButtonAtIndex:)]) {

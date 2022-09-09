@@ -30,6 +30,7 @@
 
 typedef void (^UIAlertViewBlock) (UIAlertView * __nonnull alertView);
 typedef void (^UIAlertViewCompletionBlock) (UIAlertView * __nonnull alertView, NSInteger buttonIndex);
+typedef void (^UIAlertViewTextFieldCompletionBlock) (UIAlertView * __nonnull alertView, NSInteger buttonIndex, NSString * __nonnull text);
 
 @interface UIAlertView (Blocks)
 
@@ -42,6 +43,15 @@ typedef void (^UIAlertViewCompletionBlock) (UIAlertView * __nonnull alertView, N
 
 + (nonnull instancetype)showWithTitle:(nullable NSString *)title
                               message:(nullable NSString *)message
+                                style:(UIAlertViewStyle)style
+                           textToEdit:(nullable NSString *)text
+                          placeholder:(nullable NSString *)placeholder
+                    cancelButtonTitle:(nullable NSString *)cancelButtonTitle
+                    otherButtonTitles:(nullable NSArray *)otherButtonTitles
+                             tapBlock:(nullable UIAlertViewTextFieldCompletionBlock)tapBlock;
+
++ (nonnull instancetype)showWithTitle:(nullable NSString *)title
+                              message:(nullable NSString *)message
                     cancelButtonTitle:(nullable NSString *)cancelButtonTitle
                     otherButtonTitles:(nullable NSArray *)otherButtonTitles
                              tapBlock:(nullable UIAlertViewCompletionBlock)tapBlock;
@@ -49,6 +59,10 @@ typedef void (^UIAlertViewCompletionBlock) (UIAlertView * __nonnull alertView, N
 @property (copy, nonatomic, nullable) UIAlertViewCompletionBlock tapBlock;
 @property (copy, nonatomic, nullable) UIAlertViewCompletionBlock willDismissBlock;
 @property (copy, nonatomic, nullable) UIAlertViewCompletionBlock didDismissBlock;
+
+// Custom code to support iOS7
+@property (copy, nonatomic, nullable) UIAlertViewTextFieldCompletionBlock textViewTapBlock;
+// End custom code
 
 @property (copy, nonatomic, nullable) UIAlertViewBlock willPresentBlock;
 @property (copy, nonatomic, nullable) UIAlertViewBlock didPresentBlock;
